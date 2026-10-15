@@ -1,0 +1,450 @@
+## ==================== 01. 机场订阅（订阅模板 + proxy-providers）====================
+providers: &providers { type: http, proxy: DIRECT, header: { User-Agent: ["clash-verge/v2.5.1"] }, override: { skip-cert-verify: true,ip-version: dual } ,health-check: {enable: true,lazy: true, url: 'https://www.google.com/generate_204', interval: 600}, exclude-filter: '(?i)套餐|剩余|流量|到期|重置|频道|订阅|官网|禁止|客户端|有效|联系|测试|节点|日期|群组|加入|通知|维护|网址|地址|下载|更新|APP|登录|严禁|恢复|处理|谢谢' }
+proxy-providers:
+  link1: { <<: *providers, interval: 28800, url: 'https://example.com/REPLACE_WITH_LINK1_SUBSCRIPTION', path: ./providers/link1.yaml, health-check: { enable: true,lazy: true, url: 'https://www.google.com/generate_204', interval: 300}}
+  link2: { <<: *providers, interval: 28810, url: 'https://example.com/REPLACE_WITH_LINK2_SUBSCRIPTION', path: ./providers/link2.yaml, health-check: { enable: true,lazy: true, url: 'https://www.google.com/generate_204', interval: 300}}
+  link3: { <<: *providers, interval: 28820, url: 'https://example.com/REPLACE_WITH_LINK3_SUBSCRIPTION', path: ./providers/link3.yaml}
+  link4: { <<: *providers, interval: 28830, url: 'https://example.com/REPLACE_WITH_LINK4_SUBSCRIPTION', path: ./providers/link4.yaml}
+  link5: { <<: *providers, interval: 28840, url: 'https://example.com/REPLACE_WITH_LINK5_SUBSCRIPTION', path: ./providers/link5.yaml}
+  link6: { <<: *providers, interval: 28850, url: 'https://example.com/REPLACE_WITH_LINK6_SUBSCRIPTION', path: ./providers/link6.yaml}
+  link-vps: { <<: *providers, override: { skip-cert-verify: true, ip-version: dual, client-fingerprint: chrome }, interval: 28860, url: 'https://example.com/REPLACE_WITH_LINK_VPS_SUBSCRIPTION', path: ./providers/link-vps.yaml, health-check: { enable: true,lazy: true, url: 'https://www.google.com/generate_204', interval: 300}}
+## ==================== 02. 复用锚点（地区 / 下载 / 手动选择 / DNS 服务器列表）====================
+# 地区分组，建议区分普通节点和专线
+area1: &area1 { use: [link1,link2] }
+area2: &area2 { use: [link3,link4] }
+area3: &area3 { use: [link5,link6] }
+areaai1: &areaai1 { use: [link1,link2,link3] }
+areaai2: &areaai2 { use: [link4,link5,link6] }
+# 轮询下载
+download: &download { use: [link1,link2] }
+# 手动选择
+use: &use { use: [link1,link2,link3,link4,link5,link6] }
+proxy-dns: &proxy-dns ['https://cloudflare-dns.com/dns-query#默认代理','https://dns.google/dns-query#默认代理']
+direct-dns: &direct-dns ['quic://dns.alidns.com:853#直接连接&ecs=202.96.64.0/24&ecs-override=true','udp://192.168.11.1:53']
+proxy-dns-jiedian: &proxy-dns-jiedian ['udp://192.168.11.111:11153']
+## ==================== 03. 基础设置（端口 / 模式 / 面板 / 实验性 / LightGBM）====================
+ipv6: true
+allow-lan: true
+bind-address: '*'
+mode: rule
+log-level: error
+find-process-mode: 'off'                  # 进程匹配模式 off 软路由 strict pc
+etag-support: true                        # 强烈建议开启：优化外部资源更新逻辑，省流量且加速更新
+unified-delay: true                       # 开启统一延迟 (计算 HTTP 响应时间)
+tcp-concurrent: true                      # 开启 TCP 并发连接
+disable-keep-alive: false                 # 开启长连接
+keep-alive-interval: 15                   # TCP 保活间隔
+keep-alive-idle: 600                      # TCP 空闲等待 
+external-ui: ui
+external-ui-url: https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip
+external-controller: '[::]:9090'
+secret: "CHANGE_ME_CONTROLLER_SECRET"
+profile: { store-selected: true, store-fake-ip: true, smart-collector-size: 300 }
+experimental: { quic-go-disable-gso: false, quic-go-disable-ecn: false, dialer-ip4p-convert: false }
+lgbm-auto-update: true
+lgbm-update-interval: 72
+lgbm-url: "https://ghproxy.net/https://github.com/vernesong/mihomo/releases/download/LightGBM-Model/Model.bin"
+port: 0
+socks-port: 0
+mixed-port: 1081
+redir-port: 7880
+tproxy-port: 7893
+## ==================== 04. TUN 虚拟网卡 ====================
+tun:
+  enable: true
+  stack: mips
+  dns-hijack: [any:53,tcp://any:53]
+  auto-route: true
+  auto-redirect: true
+  auto-detect-interface: true
+  disable-icmp-forwarding: true
+  route-address:
+    - fe80::110/64
+ #strict-route: true
+  # route-exclude-address:
+  #   - fe80::/10
+  #   - 0.0.0.0/8
+  #   - 10.0.0.0/8
+  #   - 100.64.0.0/10
+  #   - 127.0.0.0/8
+  #   - 169.254.0.0/16
+  #   - 172.16.0.0/12
+  #   - 192.168.0.0/16
+  #   - 224.0.0.0/4
+  #   - ::1/128
+  #   - fc00::/7
+    
+## ==================== 05. hosts（内网直连 / 域名重定向）====================
+hosts:
+  dns.alidns.com: [223.5.5.5,223.6.6.6,'2400:3200::1','2400:3200:baba::1']
+  doh.pub: [120.53.53.53,1.12.12.12]
+  dns.google: [8.8.8.8,8.8.4.4,'2001:4860:4860::8888','2001:4860:4860::8844']
+  dns.quad9.net: [9.9.9.9,149.112.112.112,'2620:fe::fe','2620:fe::9']
+  services.googleapis.cn: services.googleapis.com
+  cloudflare-dns.com: [1.1.1.1,1.0.0.1,'2606:4700:4700::1111','2606:4700:4700::1001']
+  google.cn: google.com
+  www.bing.com: cn.bing.com
+
+## ==================== 06. DNS（fake-ip 分流 / 上游服务器 / 域名嗅探前）====================
+dns: 
+  enable: true
+  ipv6: true
+  cache-algorithm: arc
+  use-hosts: true
+  use-system-hosts: true
+  prefer-h3: true
+  respect-rules: false
+  listen: "[::]:53"
+  enhanced-mode: fake-ip
+  # fake-ip-range: 198.18.0.0/15
+  # fake-ip-range6: fd00:a4c5:9b12:d3f8:e760:00df::/96
+  fake-ip-range: 7.0.0.0/8
+  #fake-ip-range6: 2001:db8::/32
+  fake-ip-filter-mode: rule
+  fake-ip-filter:
+    # 直连 → 返回真实 IP（放最前：同时命中两边的域名按直连处理）
+    - RULE-SET,private,real-ip
+    - DOMAIN-SUFFIX,push.apple.com,real-ip
+    - RULE-SET,fnnas,real-ip
+    - RULE-SET,fakeip-filter,real-ip
+    - RULE-SET,douyin,real-ip
+    - RULE-SET,bilibili,real-ip
+    - RULE-SET,tencent,real-ip
+    - RULE-SET,jd,real-ip
+    - RULE-SET,alibaba,real-ip
+    - RULE-SET,xiaohongshu,real-ip
+    - RULE-SET,sina,real-ip
+    - RULE-SET,xptv,real-ip
+    - RULE-SET,pinduoduo,real-ip
+    - RULE-SET,category-media-cn,real-ip
+    - RULE-SET,steam-cn,real-ip
+    - RULE-SET,bing-cn,real-ip
+    - RULE-SET,microsoft-cn,real-ip
+    - RULE-SET,apple-cn,real-ip
+    - RULE-SET,category-games-cn,real-ip
+    - RULE-SET,nvidia,real-ip
+    - RULE-SET,amd,real-ip
+    - RULE-SET,asus,real-ip
+    - RULE-SET,other-direct,real-ip
+    - RULE-SET,cn,real-ip
+    # 需要代理 → 返回 fake-ip
+    - RULE-SET,ai,fake-ip
+    - RULE-SET,youtube,fake-ip
+    - RULE-SET,google,fake-ip
+    - RULE-SET,github,fake-ip
+    - RULE-SET,cloudflare,fake-ip
+    - RULE-SET,microsoft,fake-ip
+    - RULE-SET,apple,fake-ip
+    - RULE-SET,telegram,fake-ip
+    - RULE-SET,SocialMedia,fake-ip
+    - RULE-SET,tiktok,fake-ip
+    - RULE-SET,reddit,fake-ip
+    - RULE-SET,twitch,fake-ip
+    - RULE-SET,streaming,fake-ip
+    - RULE-SET,steam,fake-ip
+    - RULE-SET,games-global,fake-ip
+    - RULE-SET,arr,fake-ip
+    - RULE-SET,download,fake-ip
+    - RULE-SET,docker,fake-ip
+    - RULE-SET,category-finance,fake-ip
+    - RULE-SET,stripe,fake-ip
+    - RULE-SET,paypal,fake-ip
+    - RULE-SET,category-cryptocurrency,fake-ip
+    - RULE-SET,proxy,fake-ip
+    - RULE-SET,gfw,fake-ip
+    - RULE-SET,other-proxy,fake-ip
+    # 兜底：其余全部 fake-ip（等同于原默认行为）
+    - MATCH,fake-ip
+  default-nameserver: [223.5.5.5,119.29.29.29]
+ # proxy-server-nameserver: ['https://dns.alidns.com/dns-query#直接连接','https://doh.pub/dns-query#直接连接&h3=false']
+  proxy-server-nameserver: *proxy-dns-jiedian
+  # proxy-server-nameserver-policy: { example.cpm: 'https://223.5.5.5/dns-query#直接连接' }
+  nameserver: *direct-dns
+  # direct-nameserver: *direct-dns
+  # direct-nameserver-follow-policy: false
+ #  nameserver-policy:
+ # #  'rule-set:adblockfilters,adblockfilters2' : ['rcode://success']
+ #   'rule-set:apple,microsoft': *direct-dns
+ #   'rule-set:douyin,bilibili,jd,alibaba,xiaohongshu,sina,pinduoduo,fnnas': *direct-dns
+ #   'rule-set:apple-cn,microsoft-cn,category-media-cn,tencent,category-games-cn,steam-cn,bing-cn,xptv': *direct-dns
+ #   'rule-set:nvidia,amd,asus': *direct-dns
+ #   'rule-set:arr': *proxy-dns
+ #   'rule-set:cn': *direct-dns
+ #   'rule-set:geolocation-nocn': *proxy-dns 
+ 
+## ==================== 07. 域名嗅探 sniffer ====================
+sniffer: 
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: false
+  sniff: { HTTP: { ports: [80,8080-8880], override-destination: true }, TLS: { ports: [443,8443] }, QUIC: { ports: [443,8443] } }
+  skip-domain: ['rule-set:private',"+.push.apple.com","Mijia Cloud","+.oray.com"]     
+  skip-src-address: ['rule-set:private_ip']
+  skip-dst-address: ['rule-set:private_ip']
+## ==================== 08. 规则 rules（含 QUIC 处理锚点）====================
+quic: &quic 'AND,((NETWORK,udp),(DST-PORT,443)),代理QUIC'
+rules:
+  ## —— ① 直连优先（内网 / 国内站点 / 广告拦截）——
+  - RULE-SET,private,直接连接
+  - RULE-SET,private_ip,直接连接,no-resolve
+  - RULE-SET,fnnas,直接连接
+  - RULE-SET,adblockfilters,REJECT
+  - RULE-SET,adblockfilters2,REJECT
+  - RULE-SET,douyin,直接连接
+  - RULE-SET,bilibili,直接连接
+  - RULE-SET,tencent,直接连接
+  - RULE-SET,jd,直接连接
+  - RULE-SET,alibaba,直接连接
+  - RULE-SET,xiaohongshu,直接连接
+  - RULE-SET,sina,直接连接
+  - RULE-SET,pinduoduo,直接连接
+  - RULE-SET,category-media-cn,直接连接
+  - RULE-SET,xptv,直接连接
+  - RULE-SET,nvidia,直接连接
+  - RULE-SET,amd,直接连接
+  - RULE-SET,asus,直接连接
+  - RULE-SET,steam-cn,直接连接
+  - RULE-SET,bing-cn,直接连接
+  - RULE-SET,microsoft-cn,直接连接
+  - RULE-SET,apple-cn,直接连接
+  - RULE-SET,category-games-cn,直接连接
+  - RULE-SET,other-direct,直接连接
+  
+  ## —— ② 代理：按规则集交给对应分组 ——
+  - SUB-RULE,(RULE-SET,docker),download_rules
+  - SUB-RULE,(RULE-SET,download),download_rules
+  - SUB-RULE,(RULE-SET,apple),apple_rules
+  - SUB-RULE,(RULE-SET,ai),ai_rules
+  - SUB-RULE,(RULE-SET,youtube),youtube_rules
+  - SUB-RULE,(RULE-SET,google),google_rules
+  - SUB-RULE,(RULE-SET,cloudflare),cloudflare_rules
+  - SUB-RULE,(RULE-SET,telegram),telegram_rules
+  - SUB-RULE,(RULE-SET,SocialMedia),telegram_rules
+  - SUB-RULE,(RULE-SET,github),github_rules
+  - SUB-RULE,(RULE-SET,microsoft),microsoft_rules
+
+  - SUB-RULE,(RULE-SET,steam),game_rules
+  - SUB-RULE,(RULE-SET,games-global),game_rules
+  - SUB-RULE,(RULE-SET,tiktok),tiktok_rules
+  - SUB-RULE,(RULE-SET,twitch),media_rules
+  
+  - SUB-RULE,(RULE-SET,streaming),media_rules   
+  - SUB-RULE,(RULE-SET,arr),arr_rules
+  - SUB-RULE,(RULE-SET,other-proxy),proxy_rules
+  
+  - SUB-RULE,(RULE-SET,category-finance),safe_rules
+  - SUB-RULE,(RULE-SET,stripe),safe_rules
+  - SUB-RULE,(RULE-SET,paypal),safe_rules
+  - SUB-RULE,(RULE-SET,category-cryptocurrency),safe_rules
+  - SUB-RULE,(RULE-SET,reddit),safe_rules
+  - RULE-SET,cn,直接连接
+  - SUB-RULE,(RULE-SET,proxy),proxy_rules
+  - SUB-RULE,(RULE-SET,gfw),proxy_rules
+  
+  ## —— ③ IP 规则（no-resolve，命中即定去向）——
+  - RULE-SET,xptv_ip,直接连接,no-resolve
+  - RULE-SET,bilibili_ip,直接连接,no-resolve
+  - SUB-RULE,(RULE-SET,SocialMedia_ip,no-resolve),telegram_rules
+  - SUB-RULE,(RULE-SET,google_ip,no-resolve),google_rules
+  - SUB-RULE,(RULE-SET,apple_ip,no-resolve),apple_rules
+  - SUB-RULE,(RULE-SET,streaming_ip,no-resolve),media_rules   
+  - SUB-RULE,(RULE-SET,cloudflare_ip,no-resolve),cloudflare_rules
+  - SUB-RULE,(RULE-SET,ai_ip,no-resolve),ai_rules
+  - SUB-RULE,(RULE-SET,telegram_ip,no-resolve),telegram_rules
+  # 国内兜底
+  
+  - RULE-SET,cn_ip,直接连接,no-resolve
+  - DST-PORT,12443,直接连接
+  - 'AND,((NETWORK,udp),(DST-PORT,443)),漏网之鱼QUIC'
+  - MATCH,漏网之鱼
+
+## ==================== 09. 子规则 sub-rules（组内 QUIC + 兜底去向）====================
+sub-rules: 
+
+  youtube_rules: [*quic,'MATCH,YOUTUBE']
+  arr_rules: [*quic,'MATCH,ARR']
+  github_rules: [*quic,'MATCH,GITHUB']
+  apple_rules: [*quic,'MATCH,APPLE']
+  cloudflare_rules: [*quic,'MATCH,CLOUDFLARE']
+  microsoft_rules: [*quic,'MATCH,MICROSOFT']
+  ai_rules: [*quic,'MATCH,国外AI']
+  proxy_rules: [*quic,'MATCH,默认代理']
+  game_rules: [*quic,'MATCH,游戏平台']
+  download_rules: [*quic,'MATCH,下载相关']
+  safe_rules: [*quic,'MATCH,风控安全']
+  google_rules: [*quic,'MATCH,GOOGLE']
+  telegram_rules: [*quic,'MATCH,社交平台']
+  media_rules: [*quic,'MATCH,海外媒体']
+  tiktok_rules: [*quic,'MATCH,TIKTOK']
+  
+
+## ==================== 10. 本地直连策略（DIRECT 的 IP 版本偏好）====================
+proxies: [{ name: IPV4优先, type: direct, udp: true, ip-version: ipv4-prefer },{ name: IPV6优先, type: direct, udp: true, ip-version: ipv6-prefer },{ name: 仅IPV4, type: direct, udp: true, ip-version: ipv4 },{ name: 仅IPV6, type: direct, udp: true, ip-version: ipv6 }]
+## ==================== 11. 组模板锚点①：过滤器 / 测速 / 负载均衡 / 故障转移 / 智能 ====================
+filt_gpt_hk: &filt_gpt_hk { filter: '(?i)(?=.*\[GPT\])(?=.*(🇭🇰|香港|\bHK\b|\bhongkong\b|\bhong\s?kong\b))', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Hong_Kong.png' }
+filt_gpt_tw: &filt_gpt_tw { filter: '(?i)(?=.*\[GPT\])(?=.*(🇹🇼|台湾|\\bTW\\b|\\btaiwan\\b))', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Taiwan.png' }
+filt_gpt_sg: &filt_gpt_sg { filter: '(?i)(?=.*\[GPT\])(?=.*(🇸🇬|新加坡|狮城|\\bSG\\b|\\bsingapore\\b))', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Singapore.png' }
+filt_gpt_jp: &filt_gpt_jp { filter: '(?i)(?=.*\[GPT\])(?=.*(🇯🇵|日本|\\bJP\\b|\\bjapan\\b))', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Japan.png' }
+filt_gpt_us: &filt_gpt_us { filter: '(?i)(?=.*\[GPT\])(?=.*(🇺🇸|美国|\\bUS\\b|\\bunitedstates\\b|\\bunited\s?states\\b))', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/United_States.png' }
+filt_gpt_all: &filt_gpt_all { filter: '(?i)\[GPT\]', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Universal/Airport.png' }
+
+filt_hk: &filt_hk { filter: '(?i)🇭🇰|香港|\\bHK\\b|\\bhongkong\\b|\\bhong\s?kong\\b', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Hong_Kong.png' }
+filt_tw: &filt_tw { filter: '(?i)🇹🇼|台湾|\\bTW\\b|\\btaiwan\\b', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Taiwan.png' }
+filt_sg: &filt_sg { filter: '(?i)🇸🇬|新加坡|狮城|\\bSG\\b|\\bsingapore\\b', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Singapore.png' }
+filt_jp: &filt_jp { filter: '(?i)🇯🇵|日本|\\bJP\\b|\\bjapan\\b', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/Japan.png' }
+filt_us: &filt_us { filter: '(?i)🇺🇸|美国|\\bUS\\b|\\bunitedstates\\b|\\bunited\s?states\\b', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/United_States.png' }
+
+test: &test {type: url-test, interval: 200, lazy: true, empty-fallback: REJECT, url: 'https://www.google.com/generate_204', hidden: true ,tolerance: 20,timeout: 1000}
+bal_hash: &bal_hash {type: load-balance, interval: 200, lazy: true, empty-fallback: REJECT, url: 'https://www.google.com/generate_204', strategy: consistent-hashing,hidden: true }
+bal_rr: &bal_rr {type: load-balance, interval: 200, lazy: true, empty-fallback: REJECT, url: 'https://www.google.com/generate_204', strategy: round-robin,hidden: true }
+fb: &fb {type: fallback, interval: 200, lazy: true, empty-fallback: REJECT, url: 'https://www.google.com/generate_204',hidden: true , icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Universal/SSID.png' }
+smart: &smart {type: smart, interval: 200, lazy: true, empty-fallback: REJECT, policy-priority: 'Crush:2;光速云:2;飞鸟云:0.8;蜂窝云:1;魔戒:0.5;SKY:0.5', url: 'https://www.google.com/generate_204', hidden: true, uselightgbm: true,collectdata: false}
+
+## ==================== 12. 组模板锚点②：选择组 sel_* ====================
+sel_base: &sel_base [故转|最低延迟,香港|负载均衡¹,新加坡|负载均衡¹,香港策略,新加坡策略,台湾策略,日本策略,美国策略,备用|最低延迟]  
+sel_full: &sel_full { type: select, proxies: [默认代理,VPS-LA,故转|最低延迟,香港策略,新加坡策略,台湾策略,日本策略,美国策略,备用|最低延迟,直接连接] } 
+sel_direct_first: &sel_direct_first { type: select, proxies: [直接连接,默认代理,故转|最低延迟,香港策略,新加坡策略,台湾策略,日本策略,美国策略,备用|最低延迟] } 
+sel_sg_first: &sel_sg_first { type: select, proxies: [新加坡策略,默认代理,香港策略,台湾策略,日本策略,美国策略,备用|最低延迟] } 
+## ==================== 13. 代理分组 proxy-groups ====================
+proxy-groups:
+  - { name: 默认代理, type: select, proxies: *sel_base, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Universal/StreamingSE.png' } 
+  - { name: 漏网之鱼, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Social_Media/Snapfish.png'}
+  - { name: 国外AI, type: select, proxies: [VPS-LA,AI|故障转移,默认代理,AI|香港延迟,AI|新加坡延迟,AI|台湾延迟,AI|日本延迟,AI|美国延迟,AI|备用延迟] , icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Fitness/Chat.png' }
+  - { name: 社交平台, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Social_Media/Telegram.png' }
+  - { name: GITHUB, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Social_Media/GitHub.png' }
+  - { name: 游戏平台, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Universal/Steam.png' }
+  - { name: APPLE,<<: *sel_direct_first,  icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Social_Media/Apple.png' }
+  - { name: 下载相关, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Google_Suite/Adwords.png' }
+  - { name: 风控安全, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Google_Suite/Account.png' }
+  - { name: GOOGLE, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Google_Suite/Google.png' }
+  - { name: CLOUDFLARE, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/HOMOMIX/CloudFlare.png' }
+  - { name: MICROSOFT, <<: *sel_direct_first, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Universal/Microsoft.png' }
+  - { name: TIKTOK, <<: *sel_sg_first, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Social_Media/TikTok.png' }
+  - { name: YOUTUBE, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Social_Media/YouTube.png' }
+  - { name: 海外媒体, <<: *sel_full, icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Universal/Netflix.png' }
+  - { name: ARR ,<<: *sel_full,icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Painted/Universal/Zoom.png'}
+  - { name: 直接连接, type: select , proxies: [DIRECT,IPV4优先,IPV6优先,仅IPV4,仅IPV6], interval: 1000, lazy: true, timeout: 5000, url: 'http://connect.rom.miui.com/generate_204', icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Accommodation/Online_Booking.png'  }
+  - { name: 代理QUIC, type: select, proxies: [REJECT,PASS-RULE] , icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Google_Suite/Admin.png' }
+  - { name: 漏网之鱼QUIC, type: select, proxies: [REJECT,PASS-RULE] , icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Google_Suite/Admin.png' }
+  #- { name: 手动选择, type: select , <<: [*use] , icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Universal/Select.png' }
+
+  ## —— 特殊组：故转 / AI 故障转移 ——
+  - { name: 故转|最低延迟 ,proxies: [香港|最低延迟¹,新加坡|最低延迟¹,台湾|最低延迟¹,日本|最低延迟¹,美国|最低延迟¹,香港|最低延迟²,新加坡|最低延迟²,台湾|最低延迟²,日本|最低延迟²,美国|最低延迟²],<<: *fb }
+  - { name: AI|故障转移,proxies: [AI|新加坡延迟,AI|香港延迟,AI|美国延迟,AI|日本延迟,AI|台湾延迟,AI|备用延迟],<<: *fb}
+  ## —— 自建 VPS 节点（洛杉矶 · VLESS-Vision-REALITY）——
+  - { name: VPS-LA, type: select, use: [link-vps], icon: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/proxyconfig/refs/heads/main/img/Hand-Painted-icon/Rounded_Rectangle/United_States.png' }
+
+
+  ## —— AI 地区延迟组（只筛 [GPT] 节点）——
+  - { name: AI|香港延迟,<<: [*test,*areaai1,*filt_gpt_hk] }
+  - { name: AI|日本延迟,<<: [*test,*areaai1,*filt_gpt_jp] }
+  - { name: AI|新加坡延迟,<<: [*test,*areaai1,*filt_gpt_sg] }
+  - { name: AI|台湾延迟,<<: [*test,*areaai1,*filt_gpt_tw] }
+  - { name: AI|美国延迟,<<: [*test,*areaai1,*filt_gpt_us] }
+  - { name: AI|备用延迟, <<: [*test,*areaai2,*filt_gpt_all] }
+  
+  ## —— 地区策略（只在该地区内比延迟）——
+  - { name: 香港策略,proxies: [香港|最低延迟¹,香港|最低延迟²],<<: *fb  }
+  - { name: 新加坡策略,proxies: [新加坡|最低延迟¹,新加坡|最低延迟²],<<: *fb}
+  - { name: 台湾策略,proxies: [台湾|最低延迟¹,台湾|最低延迟²],<<: *fb}
+  - { name: 日本策略,proxies: [日本|最低延迟¹,日本|最低延迟²],<<: *fb}
+  - { name: 美国策略,proxies: [美国|最低延迟¹,美国|最低延迟²],<<: *fb }
+
+  ## —— 负载均衡 / 最低延迟（机场1 = ¹，机场2 = ²）——
+  - { name: 香港|负载均衡¹, <<: [*smart,*area1,*filt_hk]}
+  - { name: 新加坡|负载均衡¹, <<: [*smart,*area1,*filt_sg]}
+  
+  - { name: 香港|最低延迟¹, <<: [*test,*area1,*filt_hk]}
+  - { name: 台湾|最低延迟¹, <<: [*test,*area1,*filt_tw]}
+  - { name: 新加坡|最低延迟¹, <<: [*test,*area1,*filt_sg]}
+  - { name: 日本|最低延迟¹, <<: [*test,*area1,*filt_jp] }
+  - { name: 美国|最低延迟¹, <<: [*test,*area1,*filt_us] }
+
+  ## —— 机场2（area2）最低延迟 ——
+  - { name: 香港|最低延迟², <<: [*test,*area2,*filt_hk] }
+  - { name: 台湾|最低延迟², <<: [*test,*area2,*filt_tw] }
+  - { name: 新加坡|最低延迟², <<: [*test,*area2,*filt_sg] }
+  - { name: 日本|最低延迟², <<: [*test,*area2,*filt_jp] }
+  - { name: 美国|最低延迟², <<: [*test,*area2,*filt_us] }
+  - { name: 备用|最低延迟, <<: [*test,*area3,*filt_us] }
+  ## —— 全局选择 GLOBAL ——
+  - { name: GLOBAL, type: select, proxies: [默认代理,漏网之鱼,国外AI,社交平台,GITHUB,游戏平台,APPLE,下载相关,风控安全,GOOGLE,CLOUDFLARE,MICROSOFT,TIKTOK,YOUTUBE,海外媒体,ARR,直接连接,代理QUIC,漏网之鱼QUIC,故转|最低延迟, 台湾策略, 日本策略, 美国策略, 香港策略, 新加坡策略, 香港|最低延迟¹, 台湾|最低延迟¹, 新加坡|最低延迟¹, 日本|最低延迟¹, 美国|最低延迟¹, 香港|负载均衡¹, 新加坡|负载均衡¹, 香港|最低延迟², 台湾|最低延迟², 新加坡|最低延迟², 日本|最低延迟², 美国|最低延迟², 备用|最低延迟, AI|香港延迟, AI|台湾延迟, AI|新加坡延迟, AI|日本延迟, AI|美国延迟,AI|备用延迟], include-all-providers: true, hidden: true, icon: 'https://mihomo.echs.top/img/Hand-Painted-icon/Google_Suite/Browser.png' }
+
+## ==================== 14. 规则集 rule-providers（A–F 分类）====================
+ip: &ip { type: http, interval: 86400, proxy: 直接连接, behavior: ipcidr, format: mrs }
+domain: &domain { type: http, interval: 86400, proxy: 直接连接, behavior: domain, format: mrs }
+rule-providers:
+  ## ==================== A. 代理 · 域名 ====================
+  google: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/google.mrs', path: ./rules/google.mrs }
+  youtube: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/youtube.mrs', path: ./rules/youtube.mrs }
+  github: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/github.mrs', path: ./rules/github.mrs }
+  microsoft: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/microsoft.mrs', path: ./rules/microsoft.mrs }
+  apple: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/apple.mrs', path: ./rules/apple.mrs }
+  cloudflare: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cloudflare.mrs', path: ./rules/cloudflare.mrs }
+  telegram: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/telegram.mrs', path: ./rules/telegram.mrs }
+  tiktok: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/tiktok.mrs', path: ./rules/tiktok.mrs }
+  reddit: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/reddit.mrs', path: ./rules/reddit.mrs }
+  twitch: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/twitch.mrs', path: ./rules/twitch.mrs }
+  steam: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/steam.mrs', path: ./rules/steam.mrs }
+  games-global: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/category-games-!cn.mrs', path: ./rules/games-global.mrs }
+  ai: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/category-ai-!cn.mrs', path: ./rules/ai.mrs }
+  docker: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/docker.mrs', path: ./rules/docker.mrs }
+  category-finance: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/category-finance.mrs', path: ./rules/category-finance.mrs }
+  stripe: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/stripe.mrs', path: ./rules/stripe.mrs }
+  paypal: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/paypal.mrs', path: ./rules/paypal.mrs }
+  category-cryptocurrency: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/category-cryptocurrency.mrs', path: ./rules/category-cryptocurrency.mrs }
+  proxy: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo-lite/geosite/proxy.mrs', path: ./rules/proxy.mrs }
+  geolocation-nocn : { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/geolocation-!cn.mrs', path: ./rules/geolocation-nocn.mrs }
+  SocialMedia: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/666OS/rules/refs/heads/release/mihomo/domain/SocialMedia.mrs', path: ./rules/SocialMedia.mrs }  # 源：666OS
+  streaming: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/666OS/rules/refs/heads/release/mihomo/domain/Streaming.mrs', path: ./rules/streaming.mrs }  # 源：666OS
+  gfw: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/gfw.mrs', path: ./rules/gfw.mrs }  # 源：DustinWin
+
+  ## ==================== B. 代理 · IP ====================
+  google_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/google.mrs', path: ./rules/google_ip.mrs }
+  apple_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo-lite/geoip/apple.mrs', path: ./rules/apple_ip.mrs }
+  cloudflare_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/cloudflare.mrs', path: ./rules/cloudflare_ip.mrs }
+  telegram_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/telegram.mrs', path: ./rules/telegram_ip.mrs }
+  ai_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/666OS/rules/refs/heads/release/mihomo/ip/AI.mrs', path: ./rules/ai_ip.mrs }  # 源：666OS
+  SocialMedia_ip:  {<<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/666OS/rules/refs/heads/release/mihomo/ip/SocialMedia.mrs', path: ./rules/SocialMedia_ip.mrs }  # 源：666OS
+  streaming_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/666OS/rules/refs/heads/release/mihomo/ip/Streaming.mrs', path: ./rules/streaming_ip.mrs }  # 源：666OS
+
+  ## ==================== C. 直连 · 域名 ====================
+  private: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/private.mrs', path: ./rules/private.mrs }
+  cn: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.mrs', path: ./rules/cn.mrs }
+  tencent: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/tencent.mrs', path: ./rules/tencent.mrs }
+  alibaba: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/alibaba.mrs', path: ./rules/alibaba.mrs }
+  jd: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/jd.mrs', path: ./rules/jd.mrs }
+  pinduoduo: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/pinduoduo.mrs', path: ./rules/pinduoduo.mrs }
+  sina: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/sina.mrs', path: ./rules/sina.mrs }
+  douyin: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/douyin.mrs', path: ./rules/douyin.mrs }
+  bilibili: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/bilibili.mrs', path: ./rules/bilibili.mrs }
+  xiaohongshu: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/xiaohongshu.mrs', path: ./rules/xiaohongshu.mrs }
+  category-media-cn: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/category-media-cn.mrs', path: ./rules/category-media-cn.mrs }
+  apple-cn: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/apple-cn.mrs', path: ./rules/apple-cn.mrs }
+  microsoft-cn: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/microsoft@cn.mrs', path: ./rules/microsoft-cn.mrs }
+  bing-cn: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/bing@cn.mrs', path: ./rules/bing-cn.mrs }
+  steam-cn: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/steam@cn.mrs', path: ./rules/steam-cn.mrs }
+  amd: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/amd.mrs', path: ./rules/amd.mrs }
+  nvidia: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/nvidia.mrs', path: ./rules/nvidia.mrs }
+  asus: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/asus.mrs', path: ./rules/asus.mrs }
+  xptv: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/666OS/rules/refs/heads/release/mihomo/domain/XPTV.mrs', path: ./rules/xptv.mrs }  # 源：666OS
+  category-games-cn: { <<: *domain, url: 'https://github.com/DustinWin/ruleset_geodata/raw/refs/heads/mihomo-ruleset/games-cn.mrs', path: ./rules/category-games-cn.mrs }  # 源：DustinWin
+  fakeip-filter: { <<: *domain, url: 'https://github.com/DustinWin/ruleset_geodata/raw/refs/heads/mihomo-ruleset/fakeip-filter.mrs', path: ./rules/fakeip-filter.mrs }  # 源：DustinWin
+
+  ## ==================== D. 直连 · IP ====================
+  private_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/private.mrs', path: ./rules/private_ip.mrs }
+  cn_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/cn.mrs', path: ./rules/cn_ip.mrs }
+  bilibili_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo-lite/geoip/bilibili.mrs', path: ./rules/bilibili_ip.mrs }
+  xptv_ip: { <<: *ip, url: 'https://ghproxy.net/https://raw.githubusercontent.com/666OS/rules/refs/heads/release/mihomo/ip/XPTV.mrs', path: ./rules/xptv_ip.mrs }  # 源：666OS
+
+  ## ==================== E. k850847587 库（arrrules）· 域名 ====================
+  download: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/arrrules/refs/heads/main/mrs/download.mrs', path: ./rules/download.mrs }  # → 下载相关（代理）
+  arr : { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/arrrules/refs/heads/main/mrs/arr.mrs', path: ./rules/arr.mrs }  # → ARR 分组（代理）
+  fnnas : { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/arrrules/refs/heads/main/mrs/fnnas.mrs', path: ./rules/fnnas.mrs }  # → 直接连接
+  other-direct : { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/arrrules/refs/heads/main/mrs/other@direct.mrs', path: ./rules/other-direct.mrs }  # → 直接连接
+  other-proxy : { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/k850847587/arrrules/refs/heads/main/mrs/other@proxy.mrs', path: ./rules/other-proxy.mrs }  # → 默认代理
+
+  ## ==================== F. 广告拦截（REJECT）· 域名 ====================
+  adblockfilters: { <<: *domain, url: 'https://gcore.jsdelivr.net/gh/217heidai/adblockfilters@main/rules/adblockmihomolite.mrs', path: ./rules/adblockfilters.mrs }  # 源：217heidai
+  adblockfilters2: { <<: *domain, url: 'https://ghproxy.net/https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash-No.Privacy.mrs', path: ./rules/adblockfilters2.mrs }  # 源：TG-Twilight
