@@ -4,7 +4,7 @@
     {
       "type": "remote","tag": "link1",
       "url": "https://example.com/REPLACE_WITH_LINK1_SUBSCRIPTION",
-      "path": "./providers/link1.json","http_client": "provider-download", "update_interval": "8h",
+      "path": "./providers/link1.json","http_client": "provider-download", "update_interval": "28800s",
       "health_check": {"enabled":true,"url":"https://www.google.com/generate_204","interval":"5m"},
       "override_dialer": {"detour":"直连","domain_resolver":"dns-proxy","disable_tcp_keep_alive":false},
       "override_tls": {"insecure": true}
@@ -12,7 +12,7 @@
     {
       "type": "remote","tag": "link2",
       "url": "https://example.com/REPLACE_WITH_LINK2_SUBSCRIPTION",
-      "path": "./providers/link2.json","http_client": "provider-download", "update_interval": "8h",
+      "path": "./providers/link2.json","http_client": "provider-download", "update_interval": "28810s",
       "health_check": {"enabled":true,"url":"https://www.google.com/generate_204","interval":"5m"},
       "override_dialer": {"detour":"直连","domain_resolver":"dns-proxy","disable_tcp_keep_alive":false},
       "override_tls": {"insecure": true}
@@ -20,7 +20,7 @@
     {
       "type": "remote","tag": "link3",
       "url": "https://example.com/REPLACE_WITH_LINK3_SUBSCRIPTION",
-      "path": "./providers/link3.json","http_client": "provider-download", "update_interval": "8h",
+      "path": "./providers/link3.json","http_client": "provider-download", "update_interval": "28820s",
       "health_check": {"enabled":true,"url":"https://www.google.com/generate_204","interval":"10m"},
       "override_dialer": {"detour":"直连","domain_resolver":"directdns-ali","disable_tcp_keep_alive":false},
       "override_tls": {"insecure": true}
@@ -28,7 +28,7 @@
     {
       "type": "remote","tag": "link4",
       "url": "https://example.com/REPLACE_WITH_LINK4_SUBSCRIPTION",
-      "path": "./providers/link4.json","http_client": "provider-download", "update_interval": "8h",
+      "path": "./providers/link4.json","http_client": "provider-download", "update_interval": "28830s",
       "health_check": {"enabled":true,"url":"https://www.google.com/generate_204","interval":"10m"},
       "override_dialer": {"detour":"直连","domain_resolver":"directdns-ali","disable_tcp_keep_alive":false},
       "override_tls": {"insecure": true}
@@ -36,7 +36,7 @@
     {
       "type": "remote","tag": "link5",
       "url": "https://example.com/REPLACE_WITH_LINK5_SUBSCRIPTION",
-      "path": "./providers/link5.json","http_client": "provider-download", "update_interval": "8h",
+      "path": "./providers/link5.json","http_client": "provider-download", "update_interval": "28840s",
       "health_check": {"enabled":true,"url":"https://www.google.com/generate_204","interval":"10m"},
       "override_dialer": {"detour":"直连","domain_resolver":"directdns-ali","disable_tcp_keep_alive":false},
       "override_tls": {"insecure": true}
@@ -44,17 +44,29 @@
     {
       "type": "remote","tag": "link6",
       "url": "https://example.com/REPLACE_WITH_LINK6_SUBSCRIPTION",
-      "path": "./providers/link6.json","http_client": "provider-download", "update_interval": "8h",
+      "path": "./providers/link6.json","http_client": "provider-download", "update_interval": "28850s",
       "health_check": {"enabled":true,"url":"https://www.google.com/generate_204","interval":"10m"},
       "override_dialer": {"detour":"直连","domain_resolver":"directdns-ali","disable_tcp_keep_alive":false},
       "override_tls": {"insecure": true}
+    },
+    {
+      "type": "remote",
+      "tag": "link-vps",
+      "url": "https://example.com/REPLACE_WITH_LINK_VPS_SUBSCRIPTION",
+      "path": "./providers/link-vps.json",
+      "http_client": "provider-download",
+      "update_interval": "28860s",
+      "exclude": "(?i)套餐|剩余|流量|到期|重置|频道|订阅|官网|禁止|客户端|有效|联系|测试|节点|日期|群组|加入|通知|维护|网址|地址|下载|更新|APP|登录|严禁|恢复|处理|谢谢",
+      "health_check": {"enabled":true,"url":"https://www.google.com/generate_204","interval":"300s"},
+      "override_dialer": {"detour":"直连","domain_resolver":"dns-proxy","disable_tcp_keep_alive":false},
+      "override_tls": {"insecure":true}
     }
     ],
   "dns": {
     "servers": [
       {"tag": "directdns", "type": "group", "servers": ["directdns-ali","directdns-lt"]},
       {"tag": "directdns-ali", "type": "quic", "server": "dns.alidns.com","server_port": 853,"domain_resolver": "hosts","detour": "直连"},
-      {"tag": "directdns-lt", "type": "udp", "server": "192.168.11.1","server_port": 53,"detour": "直连"},
+      {"tag":"directdns-lt","type":"udp","server":"202.96.64.68","server_port":53,"detour":"直连"},
       {"tag": "local", "type": "local"},
       {"tag": "proxydns", "type": "group", "servers": ["proxydns-google","proxydns-cloudflare"]},
       {"tag": "proxydns-google", "type": "h3", "server": "dns.google" ,"server_port": 443 ,"path":"/dns-query","detour": "默认代理","domain_resolver": "hosts"},
@@ -65,12 +77,15 @@
           "doh.pub": ["120.53.53.53", "1.12.12.12"],
           "cloudflare-dns.com": ["1.1.1.1", "1.0.0.1"],
           "dns.google": ["8.8.8.8", "8.8.4.4"],
-          "dns.alidns.com": ["223.5.5.5", "223.6.6.6"]
+          "dns.alidns.com": ["223.5.5.5", "223.6.6.6"],
+          "example.com": ["192.168.11.20"]
         }
       }
     ],
     "rules": [
       {"preferred_by":["hosts"],"server":"hosts"},
+      {"query_type":["A"],"domain_suffix":["example.com"],"action":"predefined","answer":["example.com. 60 IN A 192.168.11.20"]},
+      {"query_type":["AAAA"],"domain_suffix":["example.com"],"action":"predefined","rcode":"NOERROR"},
       {"query_type":["HTTPS","SVCB"],"action":"reject"},
       {"clash_mode":"Direct","server":"directdns","client_subnet":"202.96.64.0/24"},
       {"clash_mode":"Global","server":"proxydns"},
@@ -89,23 +104,24 @@
   },
   "outbounds": [
       {"tag":"默认代理","type":"selector","outbounds":["故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟"]},
-      {"tag":"漏网之鱼","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"国外AI","type":"selector","outbounds":["AI|故障转移","默认代理","AI|香港延迟","AI|新加坡延迟","AI|台湾延迟","AI|日本延迟","AI|美国延迟","AI|备用延迟"]},
-      {"tag":"社交平台","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"GITHUB","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"游戏平台","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"漏网之鱼","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"国外AI","type":"selector","outbounds":["VPS-LA","AI|故障转移","默认代理","AI|香港延迟","AI|新加坡延迟","AI|台湾延迟","AI|日本延迟","AI|美国延迟","AI|备用延迟"]},
+      {"tag":"社交平台","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"GITHUB","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"游戏平台","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
       {"tag":"APPLE","type":"selector","outbounds":["直连","默认代理","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟"]},
-      {"tag":"下载相关","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"风控安全","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"GOOGLE","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"CLOUDFLARE","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"下载相关","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"风控安全","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"GOOGLE","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"CLOUDFLARE","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
       {"tag":"MICROSOFT","type":"selector","outbounds":["直连","默认代理","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟"]},
       {"tag":"TIKTOK","type":"selector","outbounds":["新加坡策略","默认代理","香港策略","台湾策略","日本策略","美国策略","备用|最低延迟"]},
-      {"tag":"YOUTUBE","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"海外媒体","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
-      {"tag":"ARR","type":"selector","outbounds":["默认代理","故转|最低延迟","香港|负载均衡¹","新加坡|负载均衡¹","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"YOUTUBE","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"海外媒体","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
+      {"tag":"ARR","type":"selector","outbounds":["默认代理","VPS-LA","故转|最低延迟","香港策略","新加坡策略","台湾策略","日本策略","美国策略","备用|最低延迟","直连"]},
       {"tag":"故转|最低延迟","type":"urltest","outbounds":["香港|最低延迟¹","新加坡|最低延迟¹","台湾|最低延迟¹","日本|最低延迟¹","美国|最低延迟¹","香港|最低延迟²","新加坡|最低延迟²","台湾|最低延迟²","日本|最低延迟²","美国|最低延迟²"],"url":"https://www.google.com/generate_204","interval":"200s","idle_timeout":"20m","fallback":{"enabled":true,"max_delay":"450ms"}},
       {"tag":"AI|故障转移","type":"urltest","outbounds":["AI|新加坡延迟","AI|香港延迟","AI|美国延迟","AI|日本延迟","AI|台湾延迟","AI|备用延迟"],"url":"https://www.google.com/generate_204","interval":"200s","idle_timeout":"20m","fallback":{"enabled":true,"max_delay":"500ms"}},
+      {"tag":"VPS-LA","type":"selector","outbounds":[],"providers":["link-vps"]},
       {"tag":"AI|香港延迟","type":"urltest","outbounds":[],"providers":["link1","link2","link3"],"include":"(?i)(\\[GPT\\].*(🇭🇰|香港|\\bHK\\b|\\bhongkong\\b|\\bhong\\s?kong\\b)|(🇭🇰|香港|\\bHK\\b|\\bhongkong\\b|\\bhong\\s?kong\\b).*\\[GPT\\])","url":"https://www.google.com/generate_204","interval":"200s","tolerance":20,"idle_timeout":"30m"},
       {"tag":"AI|日本延迟","type":"urltest","outbounds":[],"providers":["link1","link2","link3"],"include":"(?i)(\\[GPT\\].*(🇯🇵|日本|\\bJP\\b|\\bjapan\\b)|(🇯🇵|日本|\\bJP\\b|\\bjapan\\b).*\\[GPT\\])","url":"https://www.google.com/generate_204","interval":"200s","tolerance":20,"idle_timeout":"30m"},
       {"tag":"AI|新加坡延迟","type":"urltest","outbounds":[],"providers":["link1","link2","link3"],"include":"(?i)(\\[GPT\\].*(🇸🇬|新加坡|狮城|\\bSG\\b|\\bsingapore\\b)|(🇸🇬|新加坡|狮城|\\bSG\\b|\\bsingapore\\b).*\\[GPT\\])","url":"https://www.google.com/generate_204","interval":"200s","tolerance":20,"idle_timeout":"30m"},
@@ -134,7 +150,7 @@
       {"tag":"日本|最低延迟²","type":"urltest","outbounds":[],"providers":["link3","link4"],"include":"(?i)🇯🇵|日本|\\bJP\\b|\\bjapan\\b","url":"https://www.google.com/generate_204","interval":"200s","tolerance":20,"idle_timeout":"30m"},
       {"tag":"美国|最低延迟²","type":"urltest","outbounds":[],"providers":["link3","link4"],"include":"(?i)🇺🇸|美国|\\bUS\\b|\\bunitedstates\\b|\\bunited\\s?states\\b","url":"https://www.google.com/generate_204","interval":"200s","tolerance":20,"idle_timeout":"30m"},
       {"tag":"备用|最低延迟","type":"urltest","outbounds":[],"providers":["link5","link6"],"include":"(?i)🇺🇸|美国|\\bUS\\b|\\bunitedstates\\b|\\bunited\\s?states\\b","url":"https://www.google.com/generate_204","interval":"200s","tolerance":20,"idle_timeout":"30m"},
-      {"tag":"GLOBAL","type":"selector","outbounds":["默认代理","漏网之鱼","国外AI","社交平台","GITHUB","游戏平台","APPLE","下载相关","风控安全","GOOGLE","CLOUDFLARE","MICROSOFT","TIKTOK","YOUTUBE","海外媒体","ARR","直连","故转|最低延迟","台湾策略","日本策略","美国策略","香港策略","新加坡策略","香港|最低延迟¹","台湾|最低延迟¹","新加坡|最低延迟¹","日本|最低延迟¹","美国|最低延迟¹","香港|负载均衡¹","新加坡|负载均衡¹","香港|最低延迟²","台湾|最低延迟²","新加坡|最低延迟²","日本|最低延迟²","美国|最低延迟²","备用|最低延迟","AI|香港延迟","AI|台湾延迟","AI|新加坡延迟","AI|日本延迟","AI|美国延迟","AI|备用延迟"]},
+      {"tag":"GLOBAL","type":"selector","outbounds":["默认代理","漏网之鱼","国外AI","社交平台","GITHUB","游戏平台","APPLE","下载相关","风控安全","GOOGLE","CLOUDFLARE","MICROSOFT","TIKTOK","YOUTUBE","海外媒体","ARR","直连","故转|最低延迟","台湾策略","日本策略","美国策略","香港策略","新加坡策略","香港|最低延迟¹","台湾|最低延迟¹","新加坡|最低延迟¹","日本|最低延迟¹","美国|最低延迟¹","香港|最低延迟²","台湾|最低延迟²","新加坡|最低延迟²","日本|最低延迟²","美国|最低延迟²","备用|最低延迟","AI|香港延迟","AI|台湾延迟","AI|新加坡延迟","AI|日本延迟","AI|美国延迟","AI|备用延迟"]},
       {"type":"direct","tag":"直连","domain_resolver":"directdns"}
   ],
   "route": {
